@@ -1,10 +1,10 @@
+from pathlib import Path
+
 import fitz
 import pytest
 
-from create_test_pdf import create_pdf
 
-
-def make_pdf(path, pages: list[str]) -> str:
+def make_pdf(path: Path | str, pages: list[str]) -> str:
     doc = fitz.open()
     for text in pages:
         page = doc.new_page(width=595, height=842)
@@ -14,7 +14,7 @@ def make_pdf(path, pages: list[str]) -> str:
 
 
 @pytest.fixture
-def sample_pdf(tmp_path):
+def sample_pdf(tmp_path: Path) -> str:
     """Single-page PDF with a short paragraph."""
     return make_pdf(
         tmp_path / "sample.pdf",
@@ -23,7 +23,7 @@ def sample_pdf(tmp_path):
 
 
 @pytest.fixture
-def multi_page_pdf(tmp_path):
+def multi_page_pdf(tmp_path: Path) -> str:
     """Two-page PDF."""
     return make_pdf(
         tmp_path / "multipage.pdf",
@@ -32,22 +32,9 @@ def multi_page_pdf(tmp_path):
 
 
 @pytest.fixture
-def large_pdf(tmp_path):
-    """PDF with enough words to produce multiple chunks (>500 words)."""
-    words = " ".join([f"word{i}" for i in range(600)])
-    return make_pdf(tmp_path / "large.pdf", [words])
-
-
-@pytest.fixture
-def another_pdf(tmp_path):
+def another_pdf(tmp_path: Path) -> str:
     """A second distinct PDF for multi-document tests."""
     return make_pdf(
         tmp_path / "another.pdf",
         ["Completely different document with unique content."],
     )
-
-
-@pytest.fixture
-def handbook_pdf(tmp_path):
-    """Realistic multi-section employee handbook PDF (Granit Software AB)."""
-    return create_pdf(str(tmp_path / "handbook.pdf"))

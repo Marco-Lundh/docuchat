@@ -1,4 +1,4 @@
-import pickle
+import json
 from pathlib import Path
 
 import faiss
@@ -15,7 +15,7 @@ CHUNK_OVERLAP = 50
 
 def load_pdf(path: str) -> str:
     doc = fitz.open(path)
-    return "\n".join(page.get_text() for page in doc)
+    return "\n".join(str(page.get_text()) for page in doc)
 
 
 def split_text(text: str) -> list[str]:
@@ -55,10 +55,10 @@ def build_index(pdf_paths: list[str]) -> None:
     index.add(embeddings)
 
     faiss.write_index(index, str(INDEX_PATH))
-    with open(CHUNKS_PATH, "wb") as f:
-        pickle.dump(all_chunks, f)
+    with open(CHUNKS_PATH, "w") as f:
+        json.dump(all_chunks, f)
 
     print(
-        f"Index saved. {len(all_chunks)} chunks "
-        f"from {len(pdf_paths)} document(s)."
+        f"Index saved. {len(all_chunks)} chunks"
+        f" from {len(pdf_paths)} document(s)."
     )

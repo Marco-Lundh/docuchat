@@ -10,6 +10,31 @@ A command-line tool for chatting with PDF documents using RAG (Retrieval-Augment
 
 Everything runs locally except the final LLM call to Groq.
 
+```mermaid
+flowchart TD
+    subgraph Indexing ["📄 Indexing  (one-time)"]
+        direction LR
+        PDF[PDF files] --> Parse[PyMuPDF]
+        Parse --> Split["Chunk splitter\n500 words · 50 overlap"]
+        Split --> Embed1["Sentence embeddings\nall-MiniLM-L6-v2"]
+        Embed1 --> Index[(FAISS index\ndocuchat.index)]
+        Split --> ChunkStore[(Chunk store\ndocuchat.chunks)]
+    end
+
+    subgraph Query ["💬 Query  (per question)"]
+        direction LR
+        Q[Question] --> Embed2["Sentence embeddings\nall-MiniLM-L6-v2"]
+        Embed2 --> Retrieve["FAISS cosine search\ntop-4 chunks"]
+        Index --> Retrieve
+        ChunkStore --> Retrieve
+        Retrieve --> LLM["Groq API\nllama-3.3-70b-versatile ☁️"]
+        Q --> LLM
+        LLM --> Answer[Answer]
+    end
+
+    Indexing -.->|index reused on next run| Query
+```
+
 ## Prerequisites
 
 - Python 3.14+
@@ -88,6 +113,19 @@ uv run src/tests/create_test_pdf.py
 This produces `handbook.pdf` in the current directory — a fictional employee handbook with concrete facts you can query, such as vacation days, salary review dates, and remote work policy.
 
 ## Project structure
+
+```mermaid
+flowchart LR
+    main["main.py\nCLI · arg parsing · chat loop"]
+    ingest["ingest.py\nPDF loading · chunking · FAISS index"]
+    retriever["retriever.py\nembedding · cosine search"]
+    chat["chat.py\nGroq API"]
+
+    main --> ingest
+    main --> retriever
+    main --> chat
+    retriever --> ingest
+```
 
 ```
 docuchat/

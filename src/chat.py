@@ -1,17 +1,17 @@
 import os
+from functools import cache
 
 from groq import Groq
 
 MODEL = "llama-3.3-70b-versatile"
 
-_client: Groq | None = None
 
-
+@cache
 def _get_client() -> Groq:
-    global _client
-    if _client is None:
-        _client = Groq(api_key=os.environ["GROQ_API_KEY"])
-    return _client
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY is not set")
+    return Groq(api_key=api_key)
 
 
 def ask(question: str, context_chunks: list[str]) -> str | None:

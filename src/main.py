@@ -1,18 +1,28 @@
+import io
 import sys
 from pathlib import Path
-
-if sys.stdout.encoding != "utf-8":
-    sys.stdout.reconfigure(encoding="utf-8")
 
 import truststore
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.prompt import Prompt
 
-truststore.inject_into_ssl()
-load_dotenv()
+from chat import ask
+from ingest import INDEX_PATH, build_index, reset_index
+from retriever import retrieve
 
 console = Console()
+
+
+def _setup() -> None:
+    if (
+        isinstance(sys.stdout, io.TextIOWrapper)
+        and sys.stdout.encoding != "utf-8"
+    ):
+        sys.stdout.reconfigure(encoding="utf-8")
+    truststore.inject_into_ssl()
+    load_dotenv()
+
 
 USAGE = (
     "Usage:\n"
@@ -23,16 +33,12 @@ USAGE = (
 
 
 def chat_loop(pdf_paths: list[str]) -> None:
-    from ingest import INDEX_PATH, build_index
-    from retriever import retrieve
-    from chat import ask
 
     if not INDEX_PATH.exists():
         build_index(pdf_paths)
     else:
         console.print(
-            "[dim]Using existing index. "
-            "Pass --reset to rebuild.[/dim]"
+            "[dim]Using existing index. Pass --reset to rebuild.[/dim]"
         )
 
     console.print(
@@ -48,17 +54,20 @@ def chat_loop(pdf_paths: list[str]) -> None:
 
         chunks = retrieve(question)
         answer = ask(question, chunks)
-        console.print(f"\n[bold yellow]Answer[/bold yellow]: {answer}\n")
+        if answer:
+            console.print(f"\n[bold yellow]Answer[/bold yellow]: {answer}\n")
+        else:
+            console.print("[red]No answer returned.[/red]")
 
 
 def main() -> None:
+    _setup()
     args = sys.argv[1:]
 
     do_reset = "--reset" in args
     pdf_paths = [a for a in args if not a.startswith("--")]
 
     if do_reset and not pdf_paths:
-        from ingest import reset_index
         reset_index()
         console.print("[green]Index reset.[/green]")
         return
@@ -74,7 +83,6 @@ def main() -> None:
         sys.exit(1)
 
     if do_reset:
-        from ingest import reset_index
         reset_index()
         console.print("[dim]Index reset, rebuilding...[/dim]")
 
