@@ -30,8 +30,11 @@ def setup_chat_loop(
 
 def test_no_args_exits_with_error_code(
     monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
 ) -> None:
     set_argv(monkeypatch, [])
+    mock_index = mocker.patch("main.INDEX_PATH")
+    mock_index.exists.return_value = False
     with pytest.raises(SystemExit) as exc:
         from main import main
 
@@ -81,7 +84,9 @@ def test_single_file_starts_chat_loop(
     from main import main
 
     main()
-    mock_chat.assert_called_once_with([sample_pdf])
+    mock_chat.assert_called_once_with(
+        [sample_pdf], speak_aloud=False, lang="sv"
+    )
 
 
 def test_multiple_files_passes_all_to_chat_loop(
@@ -95,7 +100,9 @@ def test_multiple_files_passes_all_to_chat_loop(
     from main import main
 
     main()
-    mock_chat.assert_called_once_with([sample_pdf, another_pdf])
+    mock_chat.assert_called_once_with(
+        [sample_pdf, another_pdf], speak_aloud=False, lang="sv"
+    )
 
 
 def test_multiple_files_exits_if_any_missing(
@@ -138,7 +145,7 @@ def test_reset_with_file_reset_happens_before_chat_loop(
     )
     mocker.patch(
         "main.chat_loop",
-        side_effect=lambda _: call_order.append("chat"),
+        side_effect=lambda *a, **kw: call_order.append("chat"),
     )
     from main import main
 
