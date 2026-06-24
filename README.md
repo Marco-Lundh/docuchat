@@ -60,17 +60,29 @@ echo "GROQ_API_KEY=your_key_here" > .env
 ## Usage
 
 ```bash
+# Show help
+uv run src/main.py --help
+
 # Chat with a single PDF (indexes on first run, reuses index on subsequent runs)
 uv run src/main.py document.pdf
 
 # Chat with multiple PDFs at once
 uv run src/main.py report.pdf manual.pdf notes.pdf
 
+# Resume chat with the existing index (no PDF needed if already indexed)
+uv run src/main.py
+
 # Reset the index (e.g. when you want to switch documents)
 uv run src/main.py --reset
 
 # Reset and immediately index new documents
 uv run src/main.py --reset document.pdf
+
+# Read answers aloud in Swedish (default)
+uv run src/main.py document.pdf --speak
+
+# Read answers aloud in English
+uv run src/main.py document.pdf --speak --lang en
 ```
 
 During a session, type your question at the `You:` prompt and press Enter. Type `quit`, `exit`, or `q` to stop.
@@ -102,12 +114,12 @@ The index is saved to `docuchat.index` and `docuchat.chunks` in the working dire
 uv run pytest
 ```
 
-Tests cover all four modules (`ingest`, `retriever`, `chat`, `main`) with 37 test cases. External dependencies — the Groq API and the sentence-transformers model — are mocked so no API key or internet connection is needed to run the test suite.
+Tests cover all five modules (`ingest`, `retriever`, `chat`, `main`, `tts`) with 53 test cases. External dependencies — the Groq API and the sentence-transformers model — are mocked so no API key or internet connection is needed to run the test suite.
 
 To generate a sample PDF for manual testing:
 
 ```bash
-uv run src/tests/create_test_pdf.py
+uv run src/create_test_pdf.py
 ```
 
 This produces `handbook.pdf` in the current directory — a fictional employee handbook with concrete facts you can query, such as vacation days, salary review dates, and remote work policy.
@@ -120,27 +132,30 @@ flowchart LR
     ingest["ingest.py\nPDF loading · chunking · FAISS index"]
     retriever["retriever.py\nembedding · cosine search"]
     chat["chat.py\nGroq API"]
+    tts["tts.py\ntext-to-speech"]
 
     main --> ingest
     main --> retriever
     main --> chat
+    main --> tts
     retriever --> ingest
 ```
 
 ```
 docuchat/
 ├── src/
-│   ├── main.py        # CLI entry point, argument parsing, chat loop
-│   ├── ingest.py      # PDF loading, text chunking, FAISS index building
-│   ├── retriever.py   # Embedding-based chunk retrieval
-│   ├── chat.py        # Groq API integration
-│   └── tests/
-│       ├── conftest.py          # Shared pytest fixtures
-│       ├── create_test_pdf.py   # Test PDF generator
-│       ├── test_ingest.py
-│       ├── test_retriever.py
-│       ├── test_chat.py
-│       └── test_main.py
+│   ├── main.py              # CLI entry point, argument parsing, chat loop
+│   ├── ingest.py            # PDF loading, text chunking, FAISS index building
+│   ├── retriever.py         # Embedding-based chunk retrieval
+│   ├── chat.py              # Groq API integration
+│   ├── tts.py               # Text-to-speech via gTTS + Windows MCI
+│   ├── conftest.py          # Shared pytest fixtures
+│   ├── create_test_pdf.py   # Test PDF generator
+│   ├── chat_test.py
+│   ├── ingest_test.py
+│   ├── main_test.py
+│   ├── retriever_test.py
+│   └── tts_test.py
 ├── pyproject.toml     # Dependencies and pytest config
 ├── spec.md            # Full project specification
 ├── .env               # Your API key (not committed)
@@ -155,6 +170,7 @@ docuchat/
 | Vector database | FAISS (runs locally)                                    |
 | PDF parsing     | PyMuPDF                                                 |
 | CLI / UI        | Rich                                                    |
+| Text-to-speech  | gTTS + Windows MCI (`winmm.dll`)                        |
 | Package manager | uv                                                      |
 
 ## Configuration
